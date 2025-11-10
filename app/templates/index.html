@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Music Trend Panel - Aggregated Charts</title>
+    <script src="https://unpkg.com/alpinejs@3.13.3/dist/cdn.min.js" defer></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+            background: linear-gradient(135deg, #0a0e27 0%, #1a1f3a 100%);
+            color: #fff;
+            min-height: 100vh;
+        }
+        
+        header {
+            text-align: center;
+            padding: 60px 20px 40px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+        }
+        
+        h1 {
+            font-size: 3rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .subtitle {
+            font-size: 1.2rem;
+            opacity: 0.95;
+            margin-bottom: 20px;
+        }
+        
+        .stats {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin-top: 20px;
+            font-size: 0.9rem;
+        }
+        
+        .stat-item {
+            background: rgba(255,255,255,0.15);
+            padding: 8px 16px;
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .filters {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            margin: 30px 0;
+            background: #1a1f3a;
+            padding: 25px;
+            border-radius: 16px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+        }
+        
+        select, button {
+            padding: 14px 24px;
+            border: none;
+            border-radius: 10px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 500;
+        }
+        
+        select {
+            background: #2d3561;
+            color: #fff;
+            min-width: 180px;
+        }
+        
+        select:hover {
+            background: #3d4671;
+        }
+        
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #fff;
+            border: none;
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+        }
+        
+        button:active {
+            transform: translateY(0);
+        }
+        
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 60px;
+            font-size: 1.4rem;
+        }
+        
+        .spinner {
+            display: inline-block;
+            width: 50px;
+            height: 50px;
+            border: 5px solid rgba(255,255,255,0.1);
+            border-top-color: #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 20px;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .track-list {
+            display: grid;
+            gap: 20px;
+        }
+        
+        .track-card {
+            display: flex;
+            gap: 25px;
+            background: linear-gradient(135deg, #1a1f3a 0%, #252b4a 100%);
+            padding: 25px;
+            border-radius: 16px;
+            transition: all 0.3s ease;
+            border: 1px solid rgba(102, 126, 234, 0.1);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .track-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        
+        .track-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 40px rgba(102, 126, 234, 0.3);
+            border-color: rgba(102, 126, 234, 0.3);
+        }
+        
+        .track-card:hover::before {
+            opacity: 1;
+        }
+        
+        .track-rank {
+            font-size: 2.5rem;
+            font-weight: bold;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            min-width: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .track-artwork {
+            width: 100px;
+            height: 100px;
+            border-radius: 12px;
+            object-fit: cover;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+        }
+        
+        .track-info {
+            flex: 1;
+        }
+        
+        .track-title {
+            font-size: 1.4rem;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #fff;
+        }
+        
+        .track-artist {
+            font-size: 1.1rem;
+            color: #a0aec0;
+            margin-bottom: 15px;
+        }
+        
+        .badges {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 15px;
+        }
+        
+        .badge {
+            padding: 6px 14px;
+            background: rgba(102, 126, 234, 0.2);
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            border: 1px solid rgba(102, 126, 234, 0.3);
+        }
+        
+        .badge.score {
+            background: rgba(118, 75, 162, 0.2);
+            border-color: rgba(118, 75, 162, 0.3);
+        }
+        
+        .buy-links {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+        
+        .buy-link {
+            padding: 10px 18px;
+            background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
+            color: #fff;
+            text-decoration: none;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            text-transform: capitalize;
+        }
+        
+        .buy-link:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(72, 187, 120, 0.4);
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 80px 20px;
+            color: #a0aec0;
+        }
+        
+        .empty-state-icon {
+            font-size: 4rem;
+            margin-bottom: 20px;
+        }
+        
+        @media (max-width: 768px) {
+            h1 { font-size: 2rem; }
+            .filters { flex-direction: column; }
+            select, button { width: 100%; }
+            .track-card { flex-direction: column; text-align: center; }
+            .track-rank { width: 100%; margin-bottom: 15px; }
+            .stats { flex-direction: column; gap: 10px; }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>🎵 Music Trend Panel</h1>
+        <p class="subtitle">Aggregated trends from Apple Music, YouTube & Spotify</p>
+        <div class="stats">
+            <div class="stat-item">🌍 Multi-Regional</div>
+            <div class="stat-item">🎧 3 Data Sources</div>
+            <div class="stat-item">📊 Smart Scoring</div>
+        </div>
+    </header>
+    
+    <div class="container" x-data="trendPanel()">
+        <div class="filters">
+            <select x-model="region" @change="loadTrends()">
+                <option value="DE">🇩🇪 Deutschland</option>
+                <option value="AT">🇦🇹 Österreich</option>
+                <option value="CH">🇨🇭 Schweiz</option>
+                <option value="US">🇺🇸 USA</option>
+                <option value="GB">🇬🇧 United Kingdom</option>
+                <option value="FR">🇫🇷 France</option>
+                <option value="ES">🇪🇸 Spain</option>
+                <option value="IT">🇮🇹 Italy</option>
+            </select>
+            
+            <select x-model="genre" @change="loadTrends()">
+                <option value="">All Genres</option>
+                <option value="techhouse">Tech House</option>
+                <option value="techno">Techno</option>
+                <option value="house">House</option>
+                <option value="pop">Pop</option>
+                <option value="hiphop">Hip Hop</option>
+                <option value="rock">Rock</option>
+                <option value="electronic">Electronic</option>
+            </select>
+            
+            <button @click="refresh()" :disabled="loading">🔄 Refresh Data</button>
+            <button @click="exportData('csv')" :disabled="loading">📊 Export CSV</button>
+            <button @click="exportData('m3u')" :disabled="loading">🎵 Export M3U</button>
+        </div>
+        
+        <div x-show="loading" class="loading">
+            <div class="spinner"></div>
+            <div>Loading trends...</div>
+        </div>
+        
+        <div x-show="!loading && tracks.length === 0" class="empty-state">
+            <div class="empty-state-icon">🎵</div>
+            <h2>No trends available</h2>
+            <p>Click "Refresh Data" to fetch the latest charts</p>
+        </div>
+        
+        <div class="track-list" x-show="!loading && tracks.length > 0">
+            <template x-for="item in tracks" :key="item.track.id">
+                <div class="track-card">
+                    <div class="track-rank" x-text="item.rank"></div>
+                    <img :src="item.track.artwork_url || 'https://via.placeholder.com/100'" 
+                         class="track-artwork" 
+                         :alt="item.track.title"
+                         loading="lazy">
+                    <div class="track-info">
+                        <div class="track-title" x-text="item.track.title"></div>
+                        <div class="track-artist" x-text="item.track.artist"></div>
+                        <div class="badges">
+                            <template x-for="source in item.sources">
+                                <span class="badge" x-text="source"></span>
+                            </template>
+                            <span class="badge score" x-text="'Score: ' + item.combined_score"></span>
+                        </div>
+                        <div class="buy-links" x-show="item.buy_links && item.buy_links.length > 0">
+                            <template x-for="link in item.buy_links.slice(0, 4)">
+                                <a :href="link.url" target="_blank" class="buy-link" x-text="link.platform"></a>
+                            </template>
+                        </div>
+                    </div>
+                </div>
+            </template>
+        </div>
+    </div>
+    
+    <script>
+        function trendPanel() {
+            return {
+                tracks: [],
+                region: 'DE',
+                genre: '',
+                loading: true,
+                
+                async loadTrends() {
+                    this.loading = true;
+                    try {
+                        const params = new URLSearchParams({ 
+                            region: this.region, 
+                            limit: 50 
+                        });
+                        if (this.genre) params.append('genre', this.genre);
+                        
+                        const response = await fetch(`/api/trends?${params}`);
+                        const data = await response.json();
+                        this.tracks = data.results || [];
+                        
+                        // Load buy links for visible tracks
+                        this.tracks.slice(0, 20).forEach(async (track) => {
+                            if (!track.buy_links || track.buy_links.length === 0) {
+                                try {
+                                    const linkResponse = await fetch(`/api/trends/${track.track.id}/buy-links`);
+                                    const linkData = await linkResponse.json();
+                                    track.buy_links = linkData.links;
+                                } catch (e) {
+                                    console.error('Failed to load buy links:', e);
+                                }
+                            }
+                        });
+                    } catch (error) {
+                        console.error('Failed to load trends:', error);
+                        alert('Failed to load trends. Please try again.');
+                    } finally {
+                        this.loading = false;
+                    }
+                },
+                
+                async refresh() {
+                    if (this.loading) return;
+                    
+                    this.loading = true;
+                    try {
+                        const params = new URLSearchParams({ 
+                            region: this.region,
+                            force: true
+                        });
+                        if (this.genre) params.append('genre', this.genre);
+                        
+                        const response = await fetch(`/api/refresh?${params}`, { 
+                            method: 'POST' 
+                        });
+                        const data = await response.json();
+                        
+                        if (data.status === 'success') {
+                            await this.loadTrends();
+                        } else {
+                            alert('Refresh completed with errors. Check console for details.');
+                            console.error(data);
+                        }
+                    } catch (error) {
+                        console.error('Refresh failed:', error);
+                        alert('Refresh failed. Please try again.');
+                    } finally {
+                        this.loading = false;
+                    }
+                },
+                
+                exportData(format) {
+                    const params = new URLSearchParams({ 
+                        format, 
+                        region: this.region,
+                        limit: 100
+                    });
+                    if (this.genre) params.append('genre', this.genre);
+                    window.open(`/api/export?${params}`, '_blank');
+                },
+                
+                init() {
+                    this.loadTrends();
+                }
+            }
+        }
+    </script>
+</body>
+</html>
